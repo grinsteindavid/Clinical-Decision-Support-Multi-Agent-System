@@ -8,6 +8,9 @@ A production-ready LangGraph multi-agent system for clinical decision support, l
 [![Flask](https://img.shields.io/badge/Flask-3.0+-red.svg)](https://flask.palletsprojects.com/)
 [![React](https://img.shields.io/badge/React-18+-61dafb.svg)](https://react.dev/)
 
+<img width="1019" height="745" alt="image" src="https://github.com/user-attachments/assets/1b90d28f-fb19-46fd-afe3-50b4f0302c71" />
+
+
 ---
 
 ## Table of Contents
