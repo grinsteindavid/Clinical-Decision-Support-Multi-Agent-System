@@ -1,5 +1,5 @@
 """
-End-to-end integration tests for the Flask API.
+End-to-end integration tests for the FastAPI API.
 
 These tests require:
 - Running Docker services (make dev)
@@ -48,13 +48,14 @@ class TestQueryEndpoint:
         assert "response" in data
         assert len(data["response"]) > 0
     
-    def test_query_missing_field_returns_400(self):
+    def test_query_missing_field_returns_422(self):
+        """FastAPI returns 422 for validation errors."""
         response = requests.post(
             f"{API_BASE}/api/query",
             json={}
         )
-        assert response.status_code == 400
-        assert "error" in response.json()
+        assert response.status_code == 422
+        assert "detail" in response.json()
 
 
 class TestThreadsEndpoint:

@@ -38,5 +38,5 @@ ENV PYTHONPATH=/app
 
 EXPOSE 5000
 
-# Production server with gunicorn
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--timeout", "120", "src.api:create_app()"]
+# Production server with uvicorn
+CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "5000", "--workers", "4"]

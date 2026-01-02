@@ -1,12 +1,15 @@
 import json
-from flask import Blueprint, request, jsonify, Response
 
+from fastapi import APIRouter, HTTPException
+from sse_starlette.sse import EventSourceResponse
+
+from src.api.schemas import QueryRequest, QueryResponse, ConfidenceScore
 from src.logger import get_logger
 from src.agents.graph import create_clinical_graph
 
 logger = get_logger(__name__)
 
-agent_bp = Blueprint('agent', __name__)
+router = APIRouter()
 
 _graph = None
 
@@ -21,112 +24,69 @@ def get_graph():
     return _graph
 
 
-@agent_bp.route('/query', methods=['POST'])
-def query():
-    """
-    Standard query endpoint - returns complete response as JSON.
-    
-    Request body:
-        {"query": "How can we reduce documentation burden?"}
-    
-    Response:
-        {"route": "tool_finder", "response": "...", "tools_results": [...]}
-    """
-    data = request.get_json()
-    
-    if not data or 'query' not in data:
-        logger.warning("Invalid request: missing 'query' field")
-        return jsonify({"error": "Missing 'query' field"}), 400
-    
-    query_text = data['query']
-    logger.info(f"API query received: '{query_text[:50]}...'")
-    
+def get_initial_state(query_text: str) -> dict:
+    """Create initial state for graph invocation."""
+    return {
+        "query": query_text,
+        "route": None,
+        "tools_results": [],
+        "orgs_results": [],
+        "response": "",
+        "error": None,
+        "confidence": {"routing": 0.0, "retrieval": 0.0, "response": 0.0, "overall": 0.0},
+    }
+
+
+@router.post("/query", response_model=QueryResponse)
+def query(request: QueryRequest):
+    """Standard query endpoint - returns complete response as JSON."""
+    logger.info(f"API query received: '{request.query[:50]}...'")
+
     try:
         graph = get_graph()
-        result = graph.invoke({
-            "query": query_text,
-            "route": None,
-            "tools_results": [],
-            "orgs_results": [],
-            "response": "",
-            "error": None,
-            "confidence": {"routing": 0.0, "retrieval": 0.0, "response": 0.0, "overall": 0.0}
-        })
-        
+        result = graph.invoke(get_initial_state(request.query))
+
         confidence = result.get("confidence", {})
-        logger.info(f"Query processed: route={result.get('route')}, confidence={confidence.get('overall', 0):.2f}")
-        
-        return jsonify({
-            "route": result.get("route"),
-            "response": result.get("response"),
-            "tools_results": result.get("tools_results", []),
-            "orgs_results": result.get("orgs_results", []),
-            "confidence": confidence
-        })
-        
+        logger.info(
+            f"Query processed: route={result.get('route')}, "
+            f"confidence={confidence.get('overall', 0):.2f}"
+        )
+
+        return QueryResponse(
+            route=result.get("route"),
+            response=result.get("response", ""),
+            tools_results=result.get("tools_results", []),
+            orgs_results=result.get("orgs_results", []),
+            confidence=ConfidenceScore(**confidence),
+        )
+
     except Exception as e:
         logger.exception(f"Error processing query: {e}")
-        return jsonify({"error": str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@agent_bp.route('/query/stream', methods=['POST'])
-def query_stream():
-    """
-    Streaming query endpoint - returns Server-Sent Events (SSE).
-    
-    Request body:
-        {"query": "How can we reduce documentation burden?"}
-    
-    Response:
-        SSE stream with events for each graph step
-    """
-    data = request.get_json()
-    
-    if not data or 'query' not in data:
-        logger.warning("Invalid stream request: missing 'query' field")
-        return jsonify({"error": "Missing 'query' field"}), 400
-    
-    query_text = data['query']
-    logger.info(f"API stream query received: '{query_text[:50]}...'")
-    
+@router.post("/query/stream")
+def query_stream(request: QueryRequest):
+    """Streaming query endpoint - returns Server-Sent Events (SSE)."""
+    logger.info(f"API stream query received: '{request.query[:50]}...'")
+
     def generate():
         try:
             graph = get_graph()
-            
-            initial_state = {
-                "query": query_text,
-                "route": None,
-                "tools_results": [],
-                "orgs_results": [],
-                "response": "",
-                "error": None,
-                "confidence": {"routing": 0.0, "retrieval": 0.0, "response": 0.0, "overall": 0.0}
-            }
-            
-            for event in graph.stream(initial_state):
+
+            for event in graph.stream(get_initial_state(request.query)):
                 node_name = list(event.keys())[0]
                 node_output = event[node_name]
-                
+
                 logger.info(f"Stream event: {node_name}")
-                
-                sse_data = {
-                    "node": node_name,
-                    "data": node_output
-                }
-                yield f"data: {json.dumps(sse_data)}\n\n"
-            
+
+                yield {"event": "message", "data": json.dumps({"node": node_name, "data": node_output})}
+
             logger.info("Stream completed")
-            yield "data: [DONE]\n\n"
-            
+            yield {"event": "message", "data": "[DONE]"}
+
         except Exception as e:
             logger.exception(f"Stream error: {e}")
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    
-    return Response(
-        generate(),
-        mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive'
-        }
-    )
+            yield {"event": "error", "data": json.dumps({"error": str(e)})}
+
+    return EventSourceResponse(generate())
