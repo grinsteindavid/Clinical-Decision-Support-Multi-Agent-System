@@ -6,8 +6,8 @@ LangGraph-based multi-agent system for clinical decision support using pgvector 
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   React UI      │     │   Flask API     │     │   PostgreSQL    │
-│   (Vite/nginx)  │────▶│   (gunicorn)    │────▶│   (pgvector)    │
+│   React UI      │     │   FastAPI       │     │   PostgreSQL    │
+│   (Vite/nginx)  │────▶│   (uvicorn)     │────▶│   (pgvector)    │
 │   Port 3000     │ SSE │   Port 5000     │     │   Port 5432     │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                │

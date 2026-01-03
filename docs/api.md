@@ -1,6 +1,6 @@
 # Clinical Decision Support API
 
-Flask-based REST API for the Clinical Decision Support Multi-Agent system.
+FastAPI-based REST API for the Clinical Decision Support Multi-Agent system.
 
 ## Endpoints
 
@@ -84,6 +84,7 @@ data: [DONE]
 | GET | `/api/threads` | List all threads |
 | POST | `/api/threads` | Create new thread |
 | GET | `/api/threads/:id` | Get thread with messages |
+| PATCH | `/api/threads/:id` | Update thread title |
 | DELETE | `/api/threads/:id` | Delete thread |
 | POST | `/api/threads/:id/query` | Query with thread context |
 | POST | `/api/threads/:id/query/stream` | Streaming with thread |

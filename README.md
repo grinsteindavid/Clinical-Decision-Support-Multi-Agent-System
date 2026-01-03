@@ -5,7 +5,7 @@ A LangGraph multi-agent system for clinical decision support, leveraging pgvecto
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-green.svg)](https://github.com/langchain-ai/langgraph)
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16+-blue.svg)](https://www.postgresql.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.0+-red.svg)](https://flask.palletsprojects.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18+-61dafb.svg)](https://react.dev/)
 
 <img width="877" height="749" alt="image" src="https://github.com/user-attachments/assets/e132526a-de05-49ef-8b2f-9d40c5144439" />
@@ -55,8 +55,8 @@ This system provides intelligent clinical decision support through a multi-agent
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   React UI      │     │   Flask API     │     │   PostgreSQL    │
-│   (Vite/nginx)  │────▶│   (gunicorn)    │────▶│   (pgvector)    │
+│   React UI      │     │   FastAPI       │     │   PostgreSQL    │
+│   (Vite/nginx)  │────▶│   (uvicorn)     │────▶│   (pgvector)    │
 │   Port 3000     │ SSE │   Port 5000     │     │   Port 5432     │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                │
@@ -216,8 +216,9 @@ pgvectors/
 ├── src/                         # Python application
 │   ├── config.py                # Configuration
 │   ├── logger.py                # Logging setup
-│   ├── api/                     # Flask REST API
+│   ├── api/                     # FastAPI REST API
 │   │   ├── app.py               # App factory
+│   │   ├── schemas.py           # Pydantic request/response schemas
 │   │   └── routes/
 │   │       ├── health.py        # Health endpoint
 │   │       ├── agent.py         # Query endpoints
@@ -228,7 +229,8 @@ pgvectors/
 │   │   ├── supervisor.py        # Router agent
 │   │   ├── tool_finder.py       # Tools agent
 │   │   ├── org_matcher.py       # Orgs agent
-│   │   └── workflow_advisor.py  # Synthesis agent
+│   │   ├── workflow_advisor.py  # Synthesis agent
+│   │   └── tools.py             # LangChain tool definitions
 │   ├── db/                      # Database layer (SQLAlchemy)
 │   │   ├── models/              # ORM models
 │   │   │   ├── base.py          # Engine & session factory
@@ -244,8 +246,11 @@ pgvectors/
 │   │   ├── base.py              # Abstract retriever
 │   │   ├── tools_retriever.py   # Tools search
 │   │   └── orgs_retriever.py    # Orgs search
-│   └── embeddings/
-│       └── openai_embed.py      # OpenAI embeddings
+│   ├── embeddings/
+│   │   └── openai_embed.py      # OpenAI embeddings
+│   └── seed/                    # Database seeding
+│       ├── clinical_data.py     # Sample clinical data
+│       └── run_seed.py          # Seed runner
 │
 ├── migrations/                  # Alembic migrations
 │   ├── env.py                   # Migration environment
@@ -344,7 +349,7 @@ docker compose -f compose/docker-compose.yml -f compose/docker-compose.prod.yml 
 
 Features:
 - Multi-stage builds (smaller images)
-- gunicorn with 4 workers
+- uvicorn with 4 workers
 - nginx serving static assets
 - Health checks enabled
 
@@ -424,7 +429,7 @@ CREATE INDEX idx_tool_embedding ON clinical_tools
 
 | Aspect | Development | Production |
 |--------|-------------|------------|
-| API Server | Flask debug (reload) | gunicorn (4 workers) |
+| API Server | FastAPI (uvicorn reload) | uvicorn (4 workers) |
 | UI Server | Vite dev server | nginx + static |
 | Code | Volume mounts | Built into image |
 | Debugging | Enabled | Disabled |
