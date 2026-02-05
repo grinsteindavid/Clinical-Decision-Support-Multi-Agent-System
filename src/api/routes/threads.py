@@ -140,7 +140,12 @@ def delete_thread_endpoint(thread_id: str):
 
 @router.post("/threads/{thread_id}/query", response_model=QueryResponse)
 def query_thread(thread_id: str, request: QueryRequest):
-    """Query with thread context."""
+    """
+    Query with thread context.
+    
+    NOTE: This endpoint is stateful. It uses LangGraph checkpoints (PostgreSQL)
+    to persist conversation history and agent state for the given thread_id.
+    """
     logger.info(f"Query in thread {thread_id}: '{request.query[:50]}...'")
 
     try:
@@ -183,7 +188,12 @@ def query_thread(thread_id: str, request: QueryRequest):
 
 @router.post("/threads/{thread_id}/query/stream")
 def query_thread_stream(thread_id: str, request: QueryRequest):
-    """Streaming query with thread context."""
+    """
+    Streaming query with thread context.
+    
+    NOTE: This endpoint is stateful. It uses LangGraph checkpoints (PostgreSQL)
+    to persist conversation history and agent state for the given thread_id.
+    """
     logger.info(f"Stream query in thread {thread_id}: '{request.query[:50]}...'")
 
     def generate():

@@ -39,7 +39,13 @@ def get_initial_state(query_text: str) -> dict:
 
 @router.post("/query", response_model=QueryResponse)
 def query(request: QueryRequest):
-    """Standard query endpoint - returns complete response as JSON."""
+    """
+    Standard query endpoint - returns complete response as JSON.
+    
+    NOTE: This endpoint is stateless. It does not use LangGraph checkpoints 
+    and does not persist conversation history. For stateful chat with memory, 
+    use the /api/threads/{thread_id}/query endpoints in threads.py.
+    """
     logger.info(f"API query received: '{request.query[:50]}...'")
 
     try:
@@ -67,7 +73,13 @@ def query(request: QueryRequest):
 
 @router.post("/query/stream")
 def query_stream(request: QueryRequest):
-    """Streaming query endpoint - returns Server-Sent Events (SSE)."""
+    """
+    Streaming query endpoint - returns Server-Sent Events (SSE).
+    
+    NOTE: This endpoint is stateless. It does not use LangGraph checkpoints 
+    and does not persist conversation history. For stateful chat with memory, 
+    use the /api/threads/{thread_id}/query/stream endpoints in threads.py.
+    """
     logger.info(f"API stream query received: '{request.query[:50]}...'")
 
     def generate():
